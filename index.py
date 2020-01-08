@@ -59,10 +59,17 @@ def setup_data():
     np.random.shuffle(data)
     np.save("training_data.npy", data)
 
+
 if PROCESS_DATA:
     setup_data()
 else:
     data = np.load("training_data.npy", allow_pickle=True)
 
-plt.imshow(data[0][0], cmap="gray")
-plt.show()
+# plt.imshow(data[0][0], cmap="gray")
+# plt.show()
+
+training_data = data[int(len(data) * 0.1):]
+test_data = data[:int(len(data) * 0.1)]
+
+print(f"training_data length: {len(training_data)}")
+print(f"test_data_length: {len(test_data)}")
