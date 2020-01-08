@@ -6,11 +6,9 @@ import matplotlib.pyplot as plt
 
 # data used for training can be found on https://www.kaggle.com/paultimothymooney/chest-xray-pneumonia/data
 
+PROCESS_DATA = False
 
 data = []
-
-training_data = []
-test_data = []
 
 
 def setup_data():
@@ -24,8 +22,12 @@ def setup_data():
     total_positive = 0
     total_negative = 0
 
+    positive_data = []
+    negative_data = []
+
     for dir in [training_positive_dir, training_negative_dir, test_positive_dir, test_negative_dir]:
 
+        print("loading files from", dir)
         for f in tqdm(os.listdir(dir)):
             try:
                 path = os.path.join(dir, f)
@@ -36,19 +38,31 @@ def setup_data():
                 if dir == training_positive_dir or dir == test_positive_dir:
                     img = [img, np.eye(2)[0]]
                     total_positive += 1
+                    positive_data.append(img)
                 else:
                     img = [img, np.eye(2)[1]]
                     total_negative += 1
+                    negative_data.append(img)
 
-                data.append(img)
             except Exception as e:
                 print("error processing data:", path)
-                print("error:", str(e))
-    print(f"Total Positive: {total_positive}")
-    print(f"Total Negative: {total_negative}")
+                print(str(e))
 
+    # print(f"Total Positive: {len(positive_data)}")
+    # print(f"Total Negative: {len(negative_data)}")
 
-setup_data()
+    for d in positive_data[:len(negative_data)]:
+        data.append(d)
+    for d in negative_data:
+        data.append(d)
+
+    np.random.shuffle(data)
+    np.save("training_data.npy", data)
+
+if PROCESS_DATA:
+    setup_data()
+else:
+    data = np.load("training_data.npy", allow_pickle=True)
 
 plt.imshow(data[0][0], cmap="gray")
 plt.show()
