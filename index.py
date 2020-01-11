@@ -13,7 +13,7 @@ import torch.optim as optim
 PROCESS_DATA = False
 IMAGE_SIZE = 100
 BATCH_SIZE = 64
-EPOCHS = 3
+EPOCHS = 5
 TEST_EVERY = 5
 
 
@@ -136,7 +136,8 @@ def test(size=32):
         outputs = net(torch.Tensor(batch_X).view(-1, 1, IMAGE_SIZE, IMAGE_SIZE))
         matches = [torch.argmax(i) == torch.argmax(j) for i, j in zip(outputs, torch.Tensor(batch_y))]
         acc = matches.count(True) / len(matches)
-    return acc
+        loss = loss_function(outputs, torch.Tensor(batch_y))
+    return acc, loss
 
 
 metrics = []
@@ -148,15 +149,19 @@ for epoch in range(EPOCHS):
 
         net.zero_grad()
         outputs = net(batch_X)
+        matches = [torch.argmax(i) == torch.argmax(j) for i, j in zip(outputs, batch_y)]
+        acc = matches.count(True) / len(matches)
         loss = loss_function(outputs, batch_y)
         loss.backward()
         optimizer.step()
 
         if i % TEST_EVERY == 0:
-            acc = test()
-            metrics.append((acc, loss))
+            training_acc, training_loss = test()
+            metrics.append((training_acc, training_loss, acc, loss))
 
-plt.plot(range(len(metrics)), [i[0] for i in metrics], label="Accuracy")
-plt.plot(range(len(metrics)), [i[1] for i in metrics], label="Loss")
+plt.plot(range(len(metrics)), [i[0] * 100 for i in metrics], label="Test Accuracy")
+plt.plot(range(len(metrics)), [i[0] * 100 for i in metrics], label="Test Loss")
+plt.plot(range(len(metrics)), [i[2] * 100 for i in metrics], label="Training Accuracy")
+plt.plot(range(len(metrics)), [i[3] * 100 for i in metrics], label="Training Loss")
 plt.legend()
 plt.show()
