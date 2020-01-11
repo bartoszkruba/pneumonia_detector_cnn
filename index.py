@@ -160,7 +160,7 @@ for epoch in range(EPOCHS):
             metrics.append((training_acc, training_loss, acc, loss))
 
 plt.plot(range(len(metrics)), [i[0] * 100 for i in metrics], label="Test Accuracy")
-plt.plot(range(len(metrics)), [i[0] * 100 for i in metrics], label="Test Loss")
+plt.plot(range(len(metrics)), [i[1] * 100 for i in metrics], label="Test Loss")
 plt.plot(range(len(metrics)), [i[2] * 100 for i in metrics], label="Training Accuracy")
 plt.plot(range(len(metrics)), [i[3] * 100 for i in metrics], label="Training Loss")
 plt.legend()
