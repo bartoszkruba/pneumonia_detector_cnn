@@ -12,6 +12,9 @@ import torch.optim as optim
 
 PROCESS_DATA = False
 IMAGE_SIZE = 100
+BATCH_SIZE = 64
+EPOCHS = 3
+TEST_EVERY = 5
 
 
 def setup_data():
@@ -78,12 +81,10 @@ class Net(nn.Module):
         self.fcl2 = nn.Linear(512, 2)
 
     def calculate_conv_output_size(self):
-        X = torch.randn(50, 50).view(-1, 1, 50, 50)
+        X = torch.randn(IMAGE_SIZE, IMAGE_SIZE).view(-1, 1, IMAGE_SIZE, IMAGE_SIZE)
         X = F.max_pool2d(F.relu(self.conv1(X)), (2, 2))
         X = F.max_pool2d(F.relu(self.conv2(X)), (2, 2))
         X = F.max_pool2d(F.relu(self.conv3(X)), (2, 2))
-
-        print("conv output shape: " + str(X[0].shape))
 
         return X[0].shape[0] * X[0].shape[1] * X[0].shape[2]
 
@@ -92,7 +93,7 @@ class Net(nn.Module):
         X = F.max_pool2d(F.relu(self.conv2(X)), (2, 2))
         X = F.max_pool2d(F.relu(self.conv3(X)), (2, 2))
         X = F.relu(self.fcl1(X.view(-1, self.to_linear)))
-        X = F.relu(self.fcl2(X))
+        X = self.fcl2(X)
 
         return X
 
@@ -105,10 +106,57 @@ else:
 # plt.imshow(data[0][0], cmap="gray")
 # plt.show()
 
-training_data = data[int(len(data) * 0.1):]
-test_data = data[:int(len(data) * 0.1)]
+# print(f"training_data length: {len(training_data)}")
+# print(f"test_data_length: {len(test_data)}")
 
-print(f"training_data length: {len(training_data)}")
-print(f"test_data_length: {len(test_data)}")
+X = [i[0] / 255.0 for i in data]
+
+y = [i[1] for i in data]
+
+training_size = int(len(data) * 0.1)
+
+training_X = X[training_size:]
+training_y = y[training_size:]
+
+test_X = X[:training_size]
+test_y = y[:training_size]
 
 net = Net()
+
+optimizer = optim.Adam(net.parameters(), lr=0.001)
+loss_function = nn.MSELoss()
+
+
+def test(size=32):
+    start_position = np.random.randint(0, len(test_X) - size)
+    batch_X = test_X[start_position: start_position + size]
+    batch_y = test_y[start_position: start_position + size]
+
+    with torch.no_grad():
+        outputs = net(torch.Tensor(batch_X).view(-1, 1, IMAGE_SIZE, IMAGE_SIZE))
+        matches = [torch.argmax(i) == torch.argmax(j) for i, j in zip(outputs, torch.Tensor(batch_y))]
+        acc = matches.count(True) / len(matches)
+    return acc
+
+
+metrics = []
+
+for epoch in range(EPOCHS):
+    for i in tqdm(range(0, len(training_X), BATCH_SIZE)):
+        batch_X = torch.Tensor(training_X[i:i + BATCH_SIZE]).view(-1, 1, IMAGE_SIZE, IMAGE_SIZE)
+        batch_y = torch.Tensor(training_y[i:i + BATCH_SIZE])
+
+        net.zero_grad()
+        outputs = net(batch_X)
+        loss = loss_function(outputs, batch_y)
+        loss.backward()
+        optimizer.step()
+
+        if i % TEST_EVERY == 0:
+            acc = test()
+            metrics.append((acc, loss))
+
+plt.plot(range(len(metrics)), [i[0] for i in metrics], label="Accuracy")
+plt.plot(range(len(metrics)), [i[1] for i in metrics], label="Loss")
+plt.legend()
+plt.show()
